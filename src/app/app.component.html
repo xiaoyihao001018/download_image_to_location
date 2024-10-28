@@ -1,0 +1,18 @@
+<main class="container">
+  <div class="controls">
+    <input type="number" [(ngModel)]="imageCount" min="1" max="20">
+    <button (click)="loadImages()">加载图片</button>
+  </div>
+
+  <div class="image-container">
+    <ng-container *ngFor="let image of imageUrls$ | async">
+      <div class="image-wrapper" [class.cached]="image.isCached">
+        <img [src]="image.url" loading="eager" alt="template image" />
+        <div class="cache-info" *ngIf="image.isCached">
+          <div class="cache-badge">已缓存</div>
+          <div class="cache-path">{{ image.cachePath }}</div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</main>
