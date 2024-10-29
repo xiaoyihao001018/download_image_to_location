@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
 import { BehaviorSubject } from 'rxjs';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { DownloadQueueService } from './download-queue.service';
 
 interface ImageState {
   url: string;
@@ -17,7 +18,31 @@ export class ImageService {
   private imageUrls = new BehaviorSubject<ImageState[]>([]);
   private isLoading = new BehaviorSubject<boolean>(false);
 
-  constructor() { }
+  constructor(private downloadQueueService: DownloadQueueService) {
+    this.downloadQueueService.getDownloadCompleteObservable().subscribe(({ url, cachePath }) => {
+      this.updateImageState(url, cachePath);
+    });
+  }
+
+  updateImageState(url: string, cachePath: string) {
+    const currentImages = this.imageUrls.value;
+    const imageIndex = currentImages.findIndex(image => image.url === url);
+
+    if (imageIndex !== -1) {
+      currentImages[imageIndex].isCached = true;
+      currentImages[imageIndex].cachePath = cachePath;
+      currentImages[imageIndex].displayUrl = convertFileSrc(cachePath);
+    } else {
+      currentImages.push({
+        url,
+        displayUrl: convertFileSrc(cachePath),
+        isCached: true,
+        cachePath
+      });
+    }
+
+    this.imageUrls.next([...currentImages]);
+  }
 
   async fetchImages(num: number) {
     try {
@@ -33,9 +58,9 @@ export class ImageService {
           if (exists) {
             cachePath = await invoke<string>('download_image', { url });
             displayUrl = convertFileSrc(cachePath);
-            console.log(displayUrl, cachePath)
+            console.log(`Converted file URL: ${displayUrl}`);
           } else {
-            this.downloadImage(url);
+            this.downloadQueueService.addToQueue(url, 3);
           }
           
           return { 
@@ -52,24 +77,6 @@ export class ImageService {
       console.error('Failed to fetch images:', error);
     } finally {
       this.isLoading.next(false);
-    }
-  }
-
-  private async downloadImage(url: string) {
-    try {
-      const cachePath = await invoke<string>('download_image', { url });
-      const currentImages = this.imageUrls.value;
-      const updatedImages = currentImages.map(img => 
-        img.url === url ? { 
-          ...img, 
-          isCached: true, 
-          cachePath,
-          displayUrl: convertFileSrc(cachePath)
-        } : img
-      );
-      this.imageUrls.next(updatedImages);
-    } catch (error) {
-      console.error('Failed to download image:', error);
     }
   }
 

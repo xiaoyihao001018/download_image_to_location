@@ -4,10 +4,31 @@
     <button (click)="loadImages()">加载图片</button>
   </div>
 
+  <div class="download-queue" *ngIf="(downloadQueue$ | async)?.length">
+    <h3>下载队列状态</h3>
+    <div class="queue-controls">
+      <button (click)="startIdleDownload()" [disabled]="isIdleDownloading">开始闲时下载</button>
+      <button (click)="pauseIdleDownload()" [disabled]="!isIdleDownloading">暂停闲时下载</button>
+    </div>
+    <div class="queue-items">
+      <div class="queue-item" *ngFor="let task of downloadQueue$ | async">
+        <div class="task-info">
+          <span class="filename">{{ getFileName(task.url) }}</span>
+          <span class="status" [class]="task.status">
+            {{ getStatusText(task.status) }}
+          </span>
+        </div>
+        <div class="priority">
+          优先级: {{ getPriorityText(task.priority) }}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="image-container">
     <ng-container *ngFor="let image of imageUrls$ | async">
       <div class="image-wrapper" [class.cached]="image.isCached">
-        <img [src]="image.url" loading="eager" alt="template image" />
+        <img [src]="image.displayUrl" loading="eager" alt="template image" />
         <div class="cache-info" *ngIf="image.isCached">
           <div class="cache-badge">已缓存</div>
           <div class="cache-path">{{ image.cachePath }}</div>

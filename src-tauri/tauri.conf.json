@@ -19,21 +19,21 @@
     ],
     "security": {
       "csp": {
-       "default-src": ["'self'"],
-       "img-src": [
-        "'self'",
-        "asset:",
-        "https://backend.nebularfantasy.com:9001",
-        "https://oss.nebularfantasy.com",
-        "data:",
-        "https:"
-       ],
-       "connect-src": [
-        "'self'",
-        "tauri:",
-        "https://backend.nebularfantasy.com:9001",
-        "https://oss.nebularfantasy.com"
-       ]
+        "default-src": ["'self'"],
+        "img-src": [
+          "'self'",
+          "asset:",
+          "https://backend.nebularfantasy.com:9001",
+          "https://oss.nebularfantasy.com",
+          "data:",
+          "https:"
+        ],
+        "connect-src": [
+          "'self'",
+          "tauri:",
+          "https://backend.nebularfantasy.com:9001",
+          "https://oss.nebularfantasy.com"
+        ]
       },
       "assetProtocol": {
         "enable": true,
