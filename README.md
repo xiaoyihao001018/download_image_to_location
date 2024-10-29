@@ -38,7 +38,7 @@
 - `processQueue()` 处理下载队列
 - `updateImageState()` 更新图片缓存状态
 
-::: mermaid
+``` mermaid
 graph TD
     subgraph 用户界面
         A[加载按钮]
@@ -70,5 +70,5 @@ graph TD
     B -->|控制| E
     H -->|缓存状态| D
     D -->|更新显示| C
-:::
+```
 
