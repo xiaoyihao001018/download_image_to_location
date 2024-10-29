@@ -10,16 +10,13 @@ import { FormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, RouterOutlet, FormsModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  styleUrls: ['./app.component.css']
 })
 export class AppComponent {
   imageUrls$ = this.imageService.getImages();
   imageCount = 5;
 
-  constructor(private imageService: ImageService) {
-    // 初始化时就加载图片
-    this.loadImages();
-  }
+  constructor(private imageService: ImageService) { }
 
   loadImages() {
     this.imageService.fetchImages(this.imageCount);

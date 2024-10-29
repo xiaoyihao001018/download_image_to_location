@@ -51,8 +51,7 @@ async fn fetch_images(num: i32) -> Result<Vec<String>, String> {
         .map_err(|e| format!("Failed to get response text: {}", e))?;
     
     let image_response: ImageResponse = serde_json::from_str(&text)
-        .map_err(|e| format!("JSON 
-        parse error: {} for text: {}", e, text))?;
+        .map_err(|e| format!("JSON parse error: {} for text: {}", e, text))?;
     
     Ok(image_response.data)
 }
@@ -60,28 +59,24 @@ async fn fetch_images(num: i32) -> Result<Vec<String>, String> {
 #[tauri::command]
 async fn check_local_image(url: &str) -> Result<bool, String> {
     let file_name = url.split('/').last().unwrap_or_default();
-    let app_dir = env::current_exe()
-        .map_err(|e| e.to_string())?
-        .parent()
-        .ok_or("Failed to get parent directory")?
-        .join("data")
-        .join("images");
-    let file_path = app_dir.join(file_name);
+    let cache_dir = std::path::Path::new("C:\\ProgramData\\TauriImageCache");
+    let file_path = cache_dir.join(file_name);
     Ok(file_path.exists())
 }
 
 #[tauri::command]
 async fn download_image(url: &str) -> Result<String, String> {
     let file_name = url.split('/').last().unwrap_or_default();
-    let app_dir = env::current_exe()
-        .map_err(|e| e.to_string())?
-        .parent()
-        .ok_or("Failed to get parent directory")?
-        .join("data")
-        .join("images");
+    let cache_dir = std::path::Path::new("C:\\ProgramData\\TauriImageCache");
     
-    std::fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
-    let file_path = app_dir.join(file_name);
+    // 确保缓存目录存在
+    std::fs::create_dir_all(cache_dir).map_err(|e| e.to_string())?;
+    let file_path = cache_dir.join(file_name);
+    
+    // 如果文件已存在，直接返回路径
+    if file_path.exists() {
+        return Ok(file_path.to_string_lossy().to_string());
+    }
     
     let response = reqwest::get(url)
         .await
@@ -95,5 +90,5 @@ async fn download_image(url: &str) -> Result<String, String> {
         .await
         .map_err(|e| e.to_string())?;
     
-    Ok(file_path.to_string_lossy().into_owned())
+    Ok(file_path.to_string_lossy().to_string())
 }
