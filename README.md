@@ -895,7 +895,8 @@ custom-protocol = ["tauri/custom-protocol"]
               "src/styles.css"
             ],
             "scripts": []
-          },          "configurations": {
+          },
+          "configurations": {
             "production": {
               "budgets": [
                 {
@@ -910,3 +911,244 @@ custom-protocol = ["tauri/custom-protocol"]
                 }
               ],
               "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "tauri-app:build:production"
+            },
+            "development": {
+              "buildTarget": "tauri-app:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}
+```
+
+#### tsconfig.json 的变化:
+
+```json
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./dist/out-tsc",
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "useDefineForClassFields": false,
+    "lib": [
+      "ES2022",
+      "dom"
+    ]
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  }
+}
+```
+
+### 6. 项目结构
+
+```
+tauri-app/
+├── src/
+│   ├── app/
+│   │   ├── services/
+│   │   │   ├── download-queue.service.ts
+│   │   │   └── image.service.ts
+│   │   ├── app.component.ts
+│   │   ├── app.component.html
+│   │   └── app.component.css
+│   ├── assets/
+│   ├── index.html
+│   ├── main.ts
+│   └── styles.css
+├── src-tauri/
+│   ├── src/
+│   │   └── lib.rs
+│   ├── Cargo.toml
+│   └── tauri.conf.json
+├── angular.json
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+## 系统架构图
+
+```mermaid
+graph TD
+    subgraph 前端UI层
+        A[AppComponent]
+        B[图片展示区]
+        C[下载队列控制]
+        D[状态显示]
+    end
+
+    subgraph Angular服务层
+        E[ImageService]
+        F[DownloadQueueService]
+        G[网络状态检测]
+    end
+
+    subgraph Tauri后端
+        H[图片下载模块]
+        I[本地缓存管理]
+        J[网络请求模块]
+    end
+
+    subgraph 外部系统
+        K[图片服务器]
+        L[本地文件系统]
+    end
+
+    A --> B
+    A --> C
+    A --> D
+    
+    B --> E
+    C --> F
+    
+    E --> F
+    F --> G
+    
+    E --> H
+    F --> H
+    
+    H --> I
+    H --> J
+    
+    J --> K
+    I --> L
+```
+
+## 数据流程图
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant UI as AppComponent
+    participant IS as ImageService
+    participant DQ as DownloadQueueService
+    participant TB as Tauri Backend
+    participant FS as 文件系统
+    participant API as 远程API
+
+    U->>UI: 点击加载图片
+    UI->>IS: fetchImages(count)
+    IS->>TB: invoke('fetch_images')
+    TB->>API: POST /getSmallGameTemplateImg
+    API-->>TB: 返回图片URL列表
+    TB-->>IS: 返回URL列表
+    
+    loop 每个图片URL
+        IS->>TB: check_local_image
+        TB->>FS: 检查缓存
+        alt 已缓存
+            FS-->>TB: 返回true
+            TB-->>IS: 返回缓存路径
+        else 未缓存
+            FS-->>TB: 返回false
+            IS->>DQ: addToQueue(url)
+            DQ->>TB: download_image
+            TB->>API: GET 图片内容
+            API-->>TB: 返回图片数据
+            TB->>FS: 保存到缓存
+            FS-->>TB: 保存完成
+            TB-->>DQ: 返回缓存路径
+            DQ-->>IS: 下载完成通知
+        end
+        IS-->>UI: 更新显示状态
+    end
+```
+
+## 状态转换图
+
+```mermaid
+stateDiagram-v2
+    [*] --> 初始状态
+    初始状态 --> 加载中: 点击加载
+    加载中 --> URL检查: 获取URL列表
+    
+    URL检查 --> 已缓存: 本地存在
+    URL检查 --> 待下载: 本地不存在
+    
+    待下载 --> 下载中: 开始下载
+    下载中 --> 下载失败: 网络错误
+    下载中 --> 已缓存: 下载成功
+    
+    下载失败 --> 待下载: 重试
+    下载失败 --> [*]: 超过重试次数
+    
+    已缓存 --> 显示中: 加载本地文件
+    显示中 --> [*]: 关闭应用
+```
+
+## 组件关系图
+
+```mermaid
+classDiagram
+    class AppComponent {
+        +imageUrls$: Observable
+        +downloadQueue$: Observable
+        +imageCount: number
+        +isIdleDownloading: boolean
+        +loadImages()
+        +startIdleDownload()
+        +pauseIdleDownload()
+    }
+    
+    class ImageService {
+        -imageUrls: BehaviorSubject
+        -isLoading: BehaviorSubject
+        +getImages()
+        +fetchImages(num)
+        +updateImageState()
+        +preloadImages()
+    }
+    
+    class DownloadQueueService {
+        -downloadQueue: BehaviorSubject
+        -isDownloading: boolean
+        -isIdle: boolean
+        +addToQueue()
+        +startIdleDownload()
+        +pauseIdleDownload()
+        -checkAndStartDownload()
+    }
+    
+    AppComponent --> ImageService
+    AppComponent --> DownloadQueueService
+    ImageService --> DownloadQueueService
+```
