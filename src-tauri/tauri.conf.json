@@ -23,6 +23,8 @@
         "img-src": [
           "'self'",
           "asset:",
+          "asset.localhost",
+          "http://asset.localhost",
           "https://backend.nebularfantasy.com:9001",
           "https://oss.nebularfantasy.com",
           "data:",
@@ -37,8 +39,9 @@
       },
       "assetProtocol": {
         "enable": true,
-        "scope": ["**/*.png"]
-      }
+        "scope": ["**/*"]
+      },
+      "capabilities": ["main-capability"]
     }
   },
   "bundle": {
